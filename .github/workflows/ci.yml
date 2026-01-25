@@ -1,116 +1,112 @@
-# name
-# on
-# push
-# branch
-# permissions
-# env
-# jobs
-# set up runner
-# checkout code
-# aws authentication with oidc
-# ecr authentication
-# docker build
-# trivy scan
-# send to ecr
-# update the deployment
+name: CI - Build, Scan and Push Image to ECR
 
-
-name: CI - Build the app and send the artifacts to ECR
-
+# ----------------------------------------
+# Trigger workflow on push to main branch
+# ----------------------------------------
 on:
   push:
     branches:
       - main
 
+# ----------------------------------------
+# Required permissions for OIDC & repo write
+# ----------------------------------------
 permissions:
-  id-token: write
-  contents: write
+  id-token: write     # Needed for AWS OIDC authentication
+  contents: write     # Needed to update & commit deployment.yaml
 
+# ----------------------------------------
+# Global Environment Variables
+# ----------------------------------------
 env:
   AWS_REGION: ap-south-1
   ECR_REPO: my-app
   IMAGE_NAME: my-app
-  
- jobs:
+
+# ----------------------------------------
+# Job: Build, Scan & Push Docker Image
+# ----------------------------------------
+jobs:
   build-and-push:
+    name: Build, Scan & Push Docker Image to ECR
     runs-on: ubuntu-latest
 
-  steps:
-  - name: checkout the code
-    uses: actions/checkout
+    steps:
+    # ----------------------------------------
+    # Step 1: Checkout source code
+    # ----------------------------------------
+    - name: Checkout the code
+      uses: actions/checkout@v4
 
-  - name: configure AWS Credentials (OIDC)
-    uses: aws-actions/configure-aws-credentials@v5.1.0
-    with: 
-     role-to-assume: arn:aws:iam::<AWS_ACCOUNT_ID>:role/github-actions-ecr-role
-     aws-region: ${{env.AWS_REGION}}
+    # ----------------------------------------
+    # Step 2: Configure AWS credentials using OIDC
+    # ----------------------------------------
+    - name: Configure AWS Credentials (OIDC)
+      uses: aws-actions/configure-aws-credentials@v5
+      with:
+        role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-ecr-role
+        aws-region: ${{ env.AWS_REGION }}
 
-  - name: Login to AWS ECR
-    uses: aws-actions/amazon-ecr-login@v2 
+    # ----------------------------------------
+    # Step 3: Login to Amazon ECR
+    # ----------------------------------------
+    - name: Login to Amazon ECR
+      uses: aws-actions/amazon-ecr-login@v2
 
-  - name: Image Tag
-    run: echo "IMAGE_TAG=${GITHUB_SHA::7}" >> $GITHUB_ENV
+    # ----------------------------------------
+    # Step 4: Generate image tag using Git commit SHA
+    # ----------------------------------------
+    - name: Set Image Tag
+      run: echo "IMAGE_TAG=${GITHUB_SHA::7}" >> $GITHUB_ENV
 
-  - name: Docker Build
-    run: |
-          doocker build -t $IMAGE_NAME:$IMAGE_TAG .
+    # ----------------------------------------
+    # Step 5: Build Docker image
+    # ----------------------------------------
+    - name: Build Docker Image
+      run: |
+        docker build -t $IMAGE_NAME:$IMAGE_TAG .
 
-  - name: Tag docker image
-    run: |
+    # ----------------------------------------
+    # Step 6: Tag Docker image for ECR
+    # ----------------------------------------
+    - name: Tag Docker Image
+      run: |
         docker tag $IMAGE_NAME:$IMAGE_TAG \
         ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO }}:$IMAGE_TAG
 
-  - name: Trivy Scan Image
-    uses: aquasecurity/trivy-action@0.33.1
-    with:
+    # ----------------------------------------
+    # Step 7: Scan Docker image using Trivy
+    # ----------------------------------------
+    - name: Trivy Image Scan
+      uses: aquasecurity/trivy-action@0.33.1
+      with:
         image-ref: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO }}:${{ env.IMAGE_TAG }}
         format: table
         severity: CRITICAL,HIGH
         exit-code: 1
 
-  - name: Push to ECR
-    run: |
+    # ----------------------------------------
+    # Step 8: Push Docker image to ECR
+    # ----------------------------------------
+    - name: Push Image to ECR
+      run: |
         docker push \
         ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO }}:$IMAGE_TAG
 
-
-  - name: Update deployment.yaml
-    run: |
+    # ----------------------------------------
+    # Step 9: Update deployment.yaml with new image tag
+    # ----------------------------------------
+    - name: Update deployment.yaml
+      run: |
         sed -i "s|image:.*|image: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO }}:${IMAGE_TAG}|g" deployment.yaml
 
-  - name: Commit and Push Changes
-    run: |
+    # ----------------------------------------
+    # Step 10: Commit & push updated deployment.yaml
+    # ----------------------------------------
+    - name: Commit and Push Deployment Update
+      run: |
         git config user.name "github-actions"
         git config user.email "github-actions@github.com"
         git add deployment.yaml
         git commit -m "Update image tag to $IMAGE_TAG"
         git push
-
-
-
-      
-        
-     
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
-  
-      
