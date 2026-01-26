@@ -7,6 +7,8 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - deployment.yaml
 
 # ----------------------------------------
 # Required permissions for OIDC & repo write
@@ -67,23 +69,23 @@ jobs:
         docker build -t $IMAGE_NAME:$IMAGE_TAG .
 
     # ----------------------------------------
-    # Step 6: Tag Docker image for ECR
+    # Step 6: Scan Docker image using Trivy (LOCAL IMAGE)
+    # ----------------------------------------
+    - name: Trivy Image Scan
+      uses: aquasecurity/trivy-action@0.33.1
+      with:
+        image-ref: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+        format: table
+        severity: CRITICAL,HIGH
+        exit-code: 1
+
+    # ----------------------------------------
+    # Step 7: Tag Docker image for ECR
     # ----------------------------------------
     - name: Tag Docker Image
       run: |
         docker tag $IMAGE_NAME:$IMAGE_TAG \
         ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO }}:$IMAGE_TAG
-
-    # ----------------------------------------
-    # Step 7: Scan Docker image using Trivy
-    # ----------------------------------------
-    - name: Trivy Image Scan
-      uses: aquasecurity/trivy-action@0.33.1
-      with:
-        image-ref: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO }}:${{ env.IMAGE_TAG }}
-        format: table
-        severity: CRITICAL,HIGH
-        exit-code: 1
 
     # ----------------------------------------
     # Step 8: Push Docker image to ECR
@@ -98,7 +100,8 @@ jobs:
     # ----------------------------------------
     - name: Update deployment.yaml
       run: |
-        sed -i "s|image:.*|image: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO }}:${IMAGE_TAG}|g" deployment.yaml
+        sed -i.bak "s|image:.*|image: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO }}:${IMAGE_TAG}|g" deployment.yaml
+        rm deployment.yaml.bak
 
     # ----------------------------------------
     # Step 10: Commit & push updated deployment.yaml
@@ -108,5 +111,5 @@ jobs:
         git config user.name "github-actions"
         git config user.email "github-actions@github.com"
         git add deployment.yaml
-        git commit -m "Update image tag to $IMAGE_TAG"
+        git commit -m "Update image tag to $IMAGE_TAG [skip ci]"
         git push
