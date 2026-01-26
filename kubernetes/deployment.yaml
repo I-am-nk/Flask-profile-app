@@ -14,7 +14,16 @@ spec:
       labels:
         app: flask-app
     spec:
+<<<<<<< HEAD
       imagePullSecrets:
+=======
+      containers:
+      - name: flask-app
+        image: 412374076609.dkr.ecr.ap-south-1.amazonaws.com/flask-app:f9909a9
+        ports:
+        - containerPort: 5000
+        imaggepullsecrets:
+>>>>>>> 266e6d19c939719b276a9d3a09f81e4203ff06da
         - name: ecr-secret
       containers:
         - name: flask-app
