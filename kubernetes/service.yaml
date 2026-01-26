@@ -12,5 +12,9 @@ spec:
     - protocol: TCP
       port: 80
       targetPort: 5000
+<<<<<<< HEAD:kubernetes/Service.yaml
       
         
+=======
+        
+>>>>>>> bd946a921fba9f109de21d99f9b557f543a0390e:kubernetes/service.yaml
