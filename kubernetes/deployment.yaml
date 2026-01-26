@@ -19,4 +19,7 @@ spec:
         image: 412374076609.dkr.ecr.ap-south-1.amazonaws.com/flask-app:95db283
         ports:
         - containerPort: 5000
-        
+        imaggepullsecrets:
+        - name: ecr-secret
+
+
