@@ -18,6 +18,6 @@ spec:
         - name: ecr-secret
       containers:
         - name: flask-app
-          image: 412374076609.dkr.ecr.ap-south-1.amazonaws.com/flask-app:3af7461
+          image: 412374076609.dkr.ecr.ap-south-1.amazonaws.com/flask-app:c447cb8
           ports:
             - containerPort: 5000
