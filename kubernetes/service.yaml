@@ -5,13 +5,14 @@ metadata:
   labels:
     app: flask-app
 spec:
-  type: LoadBalancer
+  type: NodePort
   selector:
     app: flask-app
   ports:
     - protocol: TCP
       port: 80
       targetPort: 5000
+      NodePort: 30001
 <<<<<<< HEAD:kubernetes/Service.yaml
       
         
