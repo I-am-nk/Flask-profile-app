@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: flask-app
-        image: 412374076609.dkr.ecr.ap-south-1.amazonaws.com/flask-app:207c94b
+        image: 412374076609.dkr.ecr.ap-south-1.amazonaws.com/flask-app:f9909a9
         ports:
         - containerPort: 5000
         imaggepullsecrets:
