@@ -100,8 +100,8 @@ jobs:
     # ----------------------------------------
     - name: Update deployment.yaml
       run: |
-        sed -i.bak "s|image:.*|image: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO }}:${IMAGE_TAG}|g" deployment.yaml
-        rm deployment.yaml.bak
+        sed -i.bak "s|image:.*|image: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO }}:${IMAGE_TAG}|g" kubernetes/deployment.yaml
+        rm kubernetes/deployment.yaml.bak
 
     # ----------------------------------------
     # Step 10: Commit & push updated deployment.yaml
