@@ -20,8 +20,8 @@ permissions:
 # ----------------------------------------
 env:
   AWS_REGION: ap-south-1
-  ECR_REPO: my-app
-  IMAGE_NAME: my-app
+  ECR_REPO: flask-app
+  IMAGE_NAME: flask-app
 
 # ----------------------------------------
 # Job: Build, Scan & Push Docker Image
