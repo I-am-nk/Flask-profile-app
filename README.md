@@ -2,7 +2,7 @@
 
 This document explains how GitHub Actions authenticates with Amazon Web Services (AWS) using **OIDC (OpenID Connect)**, without storing long-lived AWS access keys.
 
-## 🚀 Why OIDC?
+## Why OIDC?
 
 Traditional CI/CD uses:
 * `AWS_ACCESS_KEY_ID`
