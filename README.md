@@ -29,7 +29,7 @@ graph TD
 
 ---
 
-## 🛠 Step 1: Create OIDC Provider in AWS
+## Step 1: Create OIDC Provider in AWS
 
 **AWS Console Path:**
 `IAM` → `Identity providers` → `Add provider`
@@ -47,7 +47,7 @@ graph TD
 
 ---
 
-## 🛠 Step 2: Create IAM Role for GitHub Actions
+## Step 2: Create IAM Role for GitHub Actions
 
 **AWS Console Path:**
 `IAM` → `Roles` → `Create role`
@@ -67,14 +67,14 @@ graph TD
 
 ---
 
-## 🛠 Step 3: Attach IAM Permissions to the Role to access ECR
+## Step 3: Attach IAM Permissions to the Role to access ECR
 
  * Search it in permission policy search box `AmazonEC2ContainerRegistryPowerUser` select it 
  * Click next → give the Role Name → Creaet Role 
 
 ---
 
-## 🛠 Step 5: Configure GitHub Repository Secrets
+## Step 4: Configure GitHub Repository Secrets
 
 **In GitHub:**
 `Repo` → `Settings` → `Secrets and variables` → `Actions`
@@ -93,7 +93,7 @@ Add **ONLY** these secrets:
 
 ---
 
-## 🛠 Step 6: Use OIDC in GitHub Actions Workflow
+## Step 5: Use OIDC in GitHub Actions Workflow
 
 Here is a minimal workflow example.
 
