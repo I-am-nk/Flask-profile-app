@@ -115,7 +115,7 @@ permissions:
 1. Requests an OIDC token from GitHub.
 2. Exchanges it with AWS STS.
 3. Receives temporary credentials.
-(Note: "github-actions-ecr-role" its a IAM role name replace it with your created name)
+4. (Note: "github-actions-ecr-role" its a IAM role name replace it with your created name)
 ---
 
 ## ✅ Verification
@@ -134,9 +134,10 @@ When the workflow runs successfully:
 * **Best practice** for modern CI/CD pipelines.
 * Same approach works for **ECR, EKS, S3, Terraform**, etc.
 
+---
   ## 👨‍💻 Author
 **Nandkishor Khandare**  
 Cloud & DevOps / SRE Engineer  
 
 ## 📬 **Contact**: 
- [Twitter]((https://x.com/devops_nk)) | [LinkedIn](https://www.linkedin.com/in/nandkishor-khandare-616492215/) | [Email](nandkishor.k6e@gmail.com) 
+ [Twitter](https://x.com/devops_nk) | [LinkedIn](https://www.linkedin.com/in/nandkishor-khandare-616492215/) | [Email](nandkishor.k6e@gmail.com) 
