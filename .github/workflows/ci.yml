@@ -1,115 +1,145 @@
+# ---------------------------------------------------------
+# Workflow Name
+# This workflow builds, scans and pushes Docker image to ECR
+# ---------------------------------------------------------
 name: CI - Build, Scan and Push Image to ECR
 
-# ----------------------------------------
-# Trigger workflow on push to main branch
-# ----------------------------------------
+# ---------------------------------------------------------
+# Trigger Workflow
+# Runs only when code is pushed to main branch
+# Ignore deployment.yaml changes to avoid infinite loop
+# ---------------------------------------------------------
 on:
   push:
     branches:
       - main
     paths-ignore:
-      - deployment.yaml
+      - kubernetes/deployment.yaml
 
-# ----------------------------------------
-# Required permissions for OIDC & repo write
-# ----------------------------------------
+# ---------------------------------------------------------
+# GitHub Permissions
+# id-token: Required for AWS OIDC authentication
+# contents: Required to commit updated deployment.yaml
+# ---------------------------------------------------------
 permissions:
-  id-token: write     # Needed for AWS OIDC authentication
-  contents: write     # Needed to update & commit deployment.yaml
+  id-token: write
+  contents: write
 
-# ----------------------------------------
+# ---------------------------------------------------------
 # Global Environment Variables
-# ----------------------------------------
+# These variables are accessible throughout the workflow
+# ---------------------------------------------------------
 env:
   AWS_REGION: ap-south-1
   ECR_REPO: flask-app
   IMAGE_NAME: flask-app
 
-# ----------------------------------------
-# Job: Build, Scan & Push Docker Image
-# ----------------------------------------
+# ---------------------------------------------------------
+# CI/CD Job
+# ---------------------------------------------------------
 jobs:
   build-and-push:
+
+    # Job Name displayed in GitHub Actions UI
     name: Build, Scan & Push Docker Image to ECR
+
+    # GitHub-hosted runner
     runs-on: ubuntu-latest
 
     steps:
-    # ----------------------------------------
-    # Step 1: Checkout source code
-    # ----------------------------------------
-    - name: Checkout the code
+
+    # ---------------------------------------------------------
+    # Step 1: Checkout application source code
+    # ---------------------------------------------------------
+    - name: Checkout Code
       uses: actions/checkout@v4
 
-    # ----------------------------------------
+    # ---------------------------------------------------------
     # Step 2: Configure AWS credentials using OIDC
-    # ----------------------------------------
-    - name: Configure AWS Credentials (OIDC)
+    # Secure authentication without AWS access keys
+    # ---------------------------------------------------------
+    - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v5
       with:
         role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-ecr-role
         aws-region: ${{ env.AWS_REGION }}
 
-    # ----------------------------------------
+    # ---------------------------------------------------------
     # Step 3: Login to Amazon ECR
-    # ----------------------------------------
+    # Allows Docker to push images into ECR repository
+    # ---------------------------------------------------------
     - name: Login to Amazon ECR
       uses: aws-actions/amazon-ecr-login@v2
 
-    # ----------------------------------------
-    # Step 4: Generate image tag using Git commit SHA
-    # ----------------------------------------
+    # ---------------------------------------------------------
+    # Step 4: Generate Docker Image Tag
+    # Using first 7 characters of Git commit SHA
+    # Example: a1b2c3d
+    # ---------------------------------------------------------
     - name: Set Image Tag
       run: echo "IMAGE_TAG=${GITHUB_SHA::7}" >> $GITHUB_ENV
 
-    # ----------------------------------------
-    # Step 5: Build Docker image
-    # ----------------------------------------
+    # ---------------------------------------------------------
+    # Step 5: Build Docker Image
+    # ---------------------------------------------------------
     - name: Build Docker Image
       run: |
         docker build -t $IMAGE_NAME:$IMAGE_TAG .
 
-    # ----------------------------------------
-    # Step 6: Scan Docker image using Trivy (LOCAL IMAGE)
-    # ----------------------------------------
-    - name: Trivy Image Scan
+    # ---------------------------------------------------------
+    # Step 6: Scan Docker Image using Trivy
+    # Fails pipeline if CRITICAL vulnerabilities are found
+    # ---------------------------------------------------------
+    - name: Scan Docker Image using Trivy
       uses: aquasecurity/trivy-action@0.33.1
       with:
-        image-ref: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+        image-ref: flask-app:${{ env.IMAGE_TAG }}
         format: table
         severity: CRITICAL
         exit-code: 1
 
-    # ----------------------------------------
-    # Step 7: Tag Docker image for ECR
-    # ----------------------------------------
+    # ---------------------------------------------------------
+    # Step 7: Tag Docker Image for Amazon ECR
+    # ---------------------------------------------------------
     - name: Tag Docker Image
       run: |
         docker tag $IMAGE_NAME:$IMAGE_TAG \
         ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO }}:$IMAGE_TAG
 
-    # ----------------------------------------
-    # Step 8: Push Docker image to ECR
-    # ----------------------------------------
-    - name: Push Image to ECR
+    # ---------------------------------------------------------
+    # Step 8: Push Docker Image to Amazon ECR
+    # ---------------------------------------------------------
+    - name: Push Docker Image
       run: |
         docker push \
         ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO }}:$IMAGE_TAG
 
-    # ----------------------------------------
-    # Step 9: Update deployment.yaml with new image tag
-    # ----------------------------------------
+    # ---------------------------------------------------------
+    # Step 9: Update Kubernetes deployment manifest
+    # Replace old image tag with latest image tag
+    # ---------------------------------------------------------
     - name: Update deployment.yaml
       run: |
         sed -i.bak "s|image:.*|image: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPO }}:${IMAGE_TAG}|g" kubernetes/deployment.yaml
+
         rm kubernetes/deployment.yaml.bak
 
-    # ----------------------------------------
-    # Step 10: Commit & push updated deployment.yaml
-    # ----------------------------------------
-    - name: Commit and Push Deployment Update
+    # ---------------------------------------------------------
+    # Step 10: Commit and Push updated deployment.yaml
+    # [skip ci] prevents workflow loop triggering again
+    # ---------------------------------------------------------
+    - name: Commit and Push Changes
       run: |
+
+        # Configure GitHub Actions Git user
         git config user.name "github-actions"
         git config user.email "github-actions@github.com"
+
+        # Add updated deployment manifest
         git add kubernetes/deployment.yaml
-        git commit -m "Update image tag to $IMAGE_TAG [skip ci]"
+
+        # Commit only if changes exist
+        git diff --quiet && echo "No changes to commit" || git commit -m "Update image tag to $IMAGE_TAG [skip ci]"
+
+        # Push changes back to GitHub repository
         git push
